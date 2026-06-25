@@ -1,0 +1,1 @@
+Migrations will be generated with dotnet ef migrations add.

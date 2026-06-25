@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: devmanager-postgres
+    environment:
+      POSTGRES_DB: devmanager
+      POSTGRES_USER: devmanager
+      POSTGRES_PASSWORD: devmanager
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devmanager -d devmanager"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: DevManager.Api/Dockerfile
+    container_name: devmanager-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=devmanager;Username=devmanager;Password=devmanager
+      - Jwt__Key=devmanager-super-secret-key-2026
+      - Jwt__Issuer=DevManager
+      - Jwt__Audience=DevManagerUsers
+      - Frontend__Url=http://localhost:3000
+    ports:
+      - "5000:80"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: devmanager-frontend
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:5000
+
+volumes:
+  postgres_data:

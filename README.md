@@ -2,8 +2,6 @@
 
 Sistema Full Stack para gerenciamento de desenvolvedores, cidades, estados e linguagens de programação.
 
-Projeto desenvolvido como solução para o teste técnico de Desenvolvedor Full Stack da Cartsys Software.
-
 ---
 
 # Objetivo

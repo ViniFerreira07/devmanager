@@ -1,96 +1,468 @@
 # DevManager
 
-Corporate developer management system with full CRUD operations, authentication, and reporting capabilities.
+Sistema Full Stack para gerenciamento de desenvolvedores, cidades, estados e linguagens de programação.
 
-## Technologies
+Projeto desenvolvido como solução para o teste técnico de Desenvolvedor Full Stack da Cartsys Software.
 
-### Backend (.NET)
-- **Framework**: .NET 8
-- **Architecture**: Clean Architecture (Domain, Application, Infrastructure, API)
-- **Database**: PostgreSQL with Entity Framework Core
-- **Authentication**: JWT Bearer tokens
-- **Validation**: FluentValidation
-- **Mapping**: AutoMapper
-- **PDF Reports**: QuestPDF
+---
 
-### Frontend (Next.js)
-- **Framework**: Next.js 14 (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS v4
-- **Form Validation**: react-hook-form + zod
-- **UI Components**: Radix UI + custom components
+# Objetivo
 
-## Architecture
+O DevManager foi desenvolvido utilizando uma arquitetura moderna baseada em Clean Architecture, priorizando:
+
+* Separação de responsabilidades
+* Baixo acoplamento
+* Alta coesão
+* Facilidade de manutenção
+* Escalabilidade
+* Boas práticas de desenvolvimento
+
+A aplicação permite o gerenciamento completo de desenvolvedores e suas tecnologias, incluindo autenticação JWT, geração de relatórios em PDF, Soft Delete, validações e integração completa entre Frontend e Backend.
+
+---
+
+# Tecnologias Utilizadas
+
+## Backend
+
+* .NET 8
+* C# 12
+* ASP.NET Core Web API
+* Entity Framework Core
+* PostgreSQL
+* AutoMapper
+* FluentValidation
+* JWT Authentication
+* Swagger/OpenAPI
+* QuestPDF
+* Docker
+
+## Frontend
+
+* React 18
+* Next.js 14
+* TypeScript
+* TailwindCSS
+* shadcn/ui
+* TanStack Query
+* React Hook Form
+* Zod
+* Axios
+* Sonner (Toast)
+
+---
+
+# Arquitetura
+
+O backend foi desenvolvido utilizando Clean Architecture.
 
 ```
-DevManager/
-├── DevManager.Domain/          # Entities, interfaces, enums
-├── DevManager.Application/     # Services, DTOs, validators
-├── DevManager.Infrastructure/  # DbContext, repositories, identity
-├── DevManager.Api/             # Controllers, middleware, startup
-└── DevManager.Tests/          # Unit tests
+DevManager.Api
+│
+├── Controllers
+├── Middleware
+├── Extensions
+└── Program.cs
+
+DevManager.Application
+│
+├── DTOs
+├── Services
+├── Validators
+├── Interfaces
+├── Mappings
+└── Common
+
+DevManager.Domain
+│
+├── Entities
+├── Interfaces
+└── Enums
+
+DevManager.Infrastructure
+│
+├── Persistence
+├── Repositories
+├── Identity
+└── Reports
 ```
 
-## Docker
+Cada camada possui responsabilidades bem definidas.
+
+## Domain
+
+Contém apenas regras de negócio.
+
+Não possui dependência das demais camadas.
+
+---
+
+## Application
+
+Responsável pelos casos de uso.
+
+Contém:
+
+* Services
+* DTOs
+* Interfaces
+* Validators
+* Result Pattern
+
+---
+
+## Infrastructure
+
+Implementação de:
+
+* Entity Framework
+* Repositórios
+* JWT
+* Password Hash
+* Banco de dados
+* Relatórios PDF
+
+---
+
+## API
+
+Responsável pela exposição dos endpoints REST.
+
+Possui:
+
+* Controllers
+* Middleware
+* Swagger
+* Configuração JWT
+* Dependency Injection
+
+---
+
+# Funcionalidades
+
+## Login
+
+* Autenticação JWT
+* Senha criptografada
+* Controle de acesso
+
+---
+
+## Usuários
+
+* Cadastro
+* Login
+* E-mail único
+* Senha com Hash
+
+---
+
+## Estados
+
+CRUD completo
+
+* Cadastro
+* Edição
+* Exclusão lógica
+* Pesquisa
+
+---
+
+## Cidades
+
+CRUD completo
+
+Relacionadas a Estados.
+
+---
+
+## Linguagens
+
+CRUD completo
+
+Tipos disponíveis:
+
+* Backend
+* Frontend
+* Mobile
+* Database
+* Cloud
+* DevOps
+* Game
+
+---
+
+## Desenvolvedores
+
+Cadastro contendo:
+
+* Nome
+* Email
+* Senioridade
+* Cidade
+* Linguagens
+* Observações
+
+Relacionamento N:N com Linguagens.
+
+---
+
+## Relatórios
+
+Relatório PDF contendo:
+
+* Nome
+* Cidade
+* Estado
+* Senioridade
+* Linguagens
+
+---
+
+# Funcionalidades Técnicas
+
+* JWT Authentication
+* Soft Delete
+* Result Pattern
+* FluentValidation
+* Middleware Global de Exceções
+* AutoMapper
+* Dependency Injection
+* Generic Repository
+* Unit of Work
+* Docker
+* Swagger
+* Seed Inicial
+
+---
+
+# Banco de Dados
+
+PostgreSQL
+
+Relacionamentos:
+
+```
+Estado
+   │
+   ├── Cidade
+            │
+            ├── Desenvolvedor
+                        │
+                        └── Linguagens (N:N)
+```
+
+---
+
+# Segurança
+
+* JWT Authentication
+* Password Hash
+* Middleware Global
+* Validações
+* E-mail único
+* Soft Delete
+
+---
+
+# Docker
+
+O projeto pode ser executado utilizando Docker Compose.
+
+Containers:
+
+* PostgreSQL
+* Backend (.NET)
+* Frontend (Next.js)
+
+---
+
+# Como executar
+
+## Pré-requisitos
+
+* Docker Desktop
+
+ou
+
+* .NET 8 SDK
+* Node.js 20+
+* PostgreSQL
+
+---
+
+## Utilizando Docker
+
+Clone o projeto
 
 ```bash
-# Build and start all services
-docker compose up -d
-
-# Services started:
-# - PostgreSQL (port 5432)
-# - .NET API (port 5000)
-# - Next.js Frontend (port 3000)
+git clone https://github.com/ViniFerreira07/devmanager.git
 ```
 
-## Endpoints
+Entre na pasta
 
-### Authentication
-- `POST /api/auth/login` - Login with email/password
-- `POST /api/auth/register` - Register new user
-
-### Developers
-- `GET /api/developers` - List with pagination and filters
-- `GET /api/developers/{id}` - Get by ID
-- `POST /api/developers` - Create developer
-- `PUT /api/developers/{id}` - Update developer
-- `DELETE /api/developers/{id}` - Soft delete developer
-
-### States
-- `GET /api/states` - List all states
-- `POST /api/states` - Create state
-- `PUT /api/states/{id}` - Update state
-- `DELETE /api/states/{id}` - Delete state
-
-### Cities
-- `GET /api/cities` - List all cities
-- `POST /api/cities` - Create city
-- `PUT /api/cities/{id}` - Update city
-- `DELETE /api/cities/{id}` - Delete city
-
-### Programming Languages
-- `GET /api/languages` - List all languages
-- `POST /api/languages` - Create language
-- `PUT /api/languages/{id}` - Update language
-- `DELETE /api/languages/{id}` - Delete language
-
-### Reports
-- `GET /api/reports/developers/pdf` - Generate PDF report
-
-## Seed User
-
-```
-Email: admin@devmanager.com
-Password: Admin@123
+```bash
+cd devmanager
 ```
 
-## Technical Decisions
+Execute
 
-1. **Clean Architecture**: Separation of concerns with independent layers
-2. **Soft Delete**: Developers are soft-deleted (DeletedAt timestamp) for audit purposes
-3. **JWT Authentication**: Stateless authentication with bearer tokens
-4. **SHA256 Password Hashing**: Password hashing using .NET's built-in cryptographic services
-5. **Global Query Filters**: Soft-deleted entities excluded from queries automatically
-6. **FluentValidation**: Fluent validation API for request validation
-7. **AutoMapper**: DTO to entity mapping with profiles
-8. **QuestPDF**: Generates developer reports in PDF format
+```bash
+docker compose up --build
+```
+
+---
+
+Frontend
+
+```
+http://localhost:3000
+```
+
+Backend
+
+```
+http://localhost:5000
+```
+
+Swagger
+
+```
+http://localhost:5000/swagger
+```
+
+---
+
+# Execução sem Docker
+
+## Backend
+
+```bash
+cd DevManager.Api
+
+dotnet restore
+
+dotnet run
+```
+
+---
+
+## Frontend
+
+```bash
+cd frontend
+
+npm install
+
+npm run dev
+```
+
+---
+
+# Estrutura Frontend
+
+```
+frontend
+
+app
+
+components
+
+services
+
+hooks
+
+schemas
+
+types
+
+contexts
+
+lib
+
+styles
+```
+
+---
+
+# Validações
+
+Todas as entradas são validadas utilizando FluentValidation no Backend e Zod no Frontend.
+
+Entre elas:
+
+* Email obrigatório
+* Email único
+* Linguagem obrigatória
+* Estado obrigatório
+* Cidade obrigatória
+* Desenvolvedor deve possuir pelo menos uma linguagem
+
+---
+
+# Decisões Técnicas
+
+## Clean Architecture
+
+Escolhida para manter baixo acoplamento entre regras de negócio e infraestrutura.
+
+---
+
+## Repository Pattern
+
+Centraliza acesso ao banco e facilita manutenção.
+
+---
+
+## Result Pattern
+
+Evita utilização excessiva de exceções como fluxo de controle e padroniza respostas da API.
+
+---
+
+## FluentValidation
+
+Separação das regras de validação da lógica de negócio.
+
+---
+
+## AutoMapper
+
+Redução de código repetitivo entre Entidades e DTOs.
+
+---
+
+## JWT
+
+Autenticação stateless, adequada para APIs REST.
+
+---
+
+## Soft Delete
+
+Os registros não são removidos fisicamente do banco, preservando histórico e integridade referencial.
+
+---
+
+# Diferenciais Implementados
+
+* Clean Architecture
+* JWT
+* Docker
+* Swagger
+* Seed inicial
+* Middleware Global
+* Soft Delete
+* Result Pattern
+* Generic Repository
+* Unit of Work
+* AutoMapper
+* FluentValidation
+* React Hook Form
+* Zod
+* TanStack Query
+* QuestPDF
+* Dark Mode
+* Componentização com shadcn/ui
+
+---

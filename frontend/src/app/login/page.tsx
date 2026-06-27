@@ -1,49 +1,67 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState } from 'react';
+import { useTheme } from 'next-themes';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { ThemeToggle } from '@/components/ThemeToggle';
+import { Code2, Moon, Sun } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { loginSchema } from '@/schemas';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
 type LoginForm = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const { login } = useAuth();
-  const [error, setError] = useState('');
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) });
+  const { theme, setTheme } = useTheme();
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema),
+  });
 
   const onSubmit = async (data: LoginForm) => {
     try {
-      setError('');
       await login(data.email, data.password);
-    } catch {
-      setError('Credenciais invalidas.');
+    } catch (error: any) {
+      const message = error?.response?.data?.message || 'Erro ao conectar ao servidor.';
+      toast.error(message);
     }
   };
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background p-6">
-      <div className="absolute right-6 top-6"><ThemeToggle /></div>
-      <section className="w-full max-w-md rounded-lg border border-border bg-card p-8 shadow-xl">
-        <h1 className="text-2xl font-semibold">DevManager</h1>
-        <p className="mt-2 text-sm text-slate-500">Acesse sua conta para gerenciar desenvolvedores.</p>
-        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
-          <div>
-            <label className="mb-1 block text-sm">Email</label>
-            <Input {...register('email')} />
-            {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email.message}</p>}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="absolute right-6 top-6"
+        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+        aria-label="Alternar tema"
+      >
+        {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+      </Button>
+      <section className="w-full max-w-md rounded-xl border bg-card p-8 shadow-xl">
+        <div className="mb-6 flex items-center gap-3">
+          <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-primary-foreground">
+            <Code2 className="h-5 w-5" />
           </div>
           <div>
-            <label className="mb-1 block text-sm">Senha</label>
-            <Input type="password" {...register('password')} />
-            {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password.message}</p>}
+            <h1 className="text-2xl font-semibold tracking-tight">DevManager</h1>
+            <p className="text-sm text-muted-foreground">Acesse sua conta para continuar.</p>
           </div>
-          {error && <p className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-500">{error}</p>}
+        </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+          <div className="space-y-1.5">
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" type="email" autoComplete="email" {...register('email')} />
+            {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="password">Senha</Label>
+            <Input id="password" type="password" autoComplete="current-password" {...register('password')} />
+            {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+          </div>
           <Button type="submit" disabled={isSubmitting} className="w-full">
             {isSubmitting ? 'Entrando...' : 'Entrar'}
           </Button>

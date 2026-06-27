@@ -17,11 +17,17 @@ export interface CityItem {
   stateName?: string;
 }
 
+export type LanguageType = 'Backend' | 'Frontend' | 'Mobile' | 'Database' | 'Cloud' | 'DevOps' | 'Game';
+
 export interface ProgrammingLanguageItem {
   id: string;
   name: string;
-  type: string;
+  type: LanguageType;
+  color: string;
+  icon: string;
 }
+
+export type Seniority = 'Junior' | 'Pleno' | 'Senior' | 'Lead';
 
 export interface DeveloperItem {
   id: string;
@@ -44,4 +50,20 @@ export interface PaginationMeta {
 
 export interface PagedResponse<T> extends PaginationMeta {
   items: T[];
+}
+
+export interface DeveloperFilter {
+  page?: number;
+  pageSize?: number;
+  name?: string;
+  cityId?: string;
+  languageId?: string;
+  seniority?: string;
+}
+
+export interface ApiError {
+  success: boolean;
+  code: string;
+  message: string;
+  errors: string[];
 }

@@ -1,25 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function HomePage() {
   const router = useRouter();
-  const [checked, setChecked] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('devmanager-token');
-    if (token) {
-      router.replace('/dashboard');
-    } else {
-      router.replace('/login');
-    }
-    setChecked(true);
+    router.replace(token ? '/dashboard' : '/login');
   }, [router]);
 
-  if (!checked) {
-    return null;
-  }
-
-  return null;
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
+      Carregando...
+    </main>
+  );
 }

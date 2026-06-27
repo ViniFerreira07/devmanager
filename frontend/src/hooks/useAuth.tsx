@@ -5,8 +5,11 @@ import { useRouter } from 'next/navigation';
 import api from '@/services/api';
 import { UserSession } from '@/types';
 
+type AuthUser = { name: string; email: string };
+
 type AuthContextValue = {
   session: UserSession | null;
+  user: AuthUser | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 };
@@ -23,25 +26,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return token ? { token, email, name } : null;
   });
 
-  const value = useMemo<AuthContextValue>(() => ({
-    session,
-    async login(email, password) {
-      const response = await api.post('/api/auth/login', { email, password });
-      const nextSession = { token: response.data.token, email: response.data.email, name: response.data.name };
-      localStorage.setItem('devmanager-token', nextSession.token);
-      localStorage.setItem('devmanager-email', nextSession.email);
-      localStorage.setItem('devmanager-name', nextSession.name);
-      setSession(nextSession);
-      router.push('/dashboard');
-    },
-    logout() {
-      localStorage.removeItem('devmanager-token');
-      localStorage.removeItem('devmanager-email');
-      localStorage.removeItem('devmanager-name');
-      setSession(null);
-      router.push('/login');
-    },
-  }), [router, session]);
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      session,
+      user: session ? { name: session.name, email: session.email } : null,
+      async login(email, password) {
+        const response = await api.post('/api/auth/login', { email, password });
+        const nextSession = {
+          token: response.data.token,
+          email: response.data.email,
+          name: response.data.name,
+        };
+        localStorage.setItem('devmanager-token', nextSession.token);
+        localStorage.setItem('devmanager-email', nextSession.email);
+        localStorage.setItem('devmanager-name', nextSession.name);
+        setSession(nextSession);
+        router.push('/dashboard');
+      },
+      logout() {
+        localStorage.removeItem('devmanager-token');
+        localStorage.removeItem('devmanager-email');
+        localStorage.removeItem('devmanager-name');
+        setSession(null);
+        router.push('/login');
+      },
+    }),
+    [router, session],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
@@ -51,6 +62,5 @@ export function useAuth() {
   if (!context) {
     throw new Error('useAuth must be used inside AuthProvider.');
   }
-
   return context;
 }

@@ -32,6 +32,11 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProgrammingLanguageService, ProgrammingLanguageService>();
         services.AddScoped<IDeveloperService, DeveloperService>();
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IDeveloperRepository, DeveloperRepository>();
+        services.AddScoped<IProgrammingLanguageRepository, ProgrammingLanguageRepository>();
+        services.AddScoped<ICityRepository, CityRepository>();
+        services.AddScoped<IStateRepository, StateRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IAppDbContext>(provider => provider.GetRequiredService<DevManagerDbContext>());
 
         services.AddSingleton<IJwtTokenService, JwtTokenService>();

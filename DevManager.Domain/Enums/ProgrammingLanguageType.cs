@@ -2,9 +2,11 @@ namespace DevManager.Domain.Enums;
 
 public enum ProgrammingLanguageType
 {
-    Frontend,
     Backend,
+    Frontend,
     Mobile,
     Database,
-    DevOps
+    Cloud,
+    DevOps,
+    Game
 }

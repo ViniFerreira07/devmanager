@@ -1,8 +1,10 @@
 using AutoMapper;
 using DevManager.Application.Common;
+using DevManager.Application.Common.Exceptions;
 using DevManager.Application.DTOs;
 using DevManager.Application.Interfaces;
 using DevManager.Domain.Entities;
+using DevManager.Domain.Interfaces;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using QuestPDF.Fluent;
@@ -13,12 +15,21 @@ namespace DevManager.Application.Services;
 
 public class DeveloperService : IDeveloperService
 {
+    private readonly IDeveloperRepository _developerRepository;
+    private readonly IProgrammingLanguageRepository _languageRepository;
     private readonly IAppDbContext _context;
     private readonly IMapper _mapper;
     private readonly IValidator<CreateDeveloperRequest> _createValidator;
 
-    public DeveloperService(IAppDbContext context, IMapper mapper, IValidator<CreateDeveloperRequest> createValidator)
+    public DeveloperService(
+        IDeveloperRepository developerRepository,
+        IProgrammingLanguageRepository languageRepository,
+        IAppDbContext context,
+        IMapper mapper,
+        IValidator<CreateDeveloperRequest> createValidator)
     {
+        _developerRepository = developerRepository;
+        _languageRepository = languageRepository;
         _context = context;
         _mapper = mapper;
         _createValidator = createValidator;
@@ -28,40 +39,12 @@ public class DeveloperService : IDeveloperService
     {
         var page = filter.Page <= 0 ? 1 : filter.Page;
         var pageSize = filter.PageSize <= 0 ? 10 : Math.Min(filter.PageSize, 100);
-        var query = _context.Developers
-            .AsNoTracking()
-            .Include(x => x.City)
-            .ThenInclude(x => x!.State)
-            .Include(x => x.ProgrammingLanguages)
-            .AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(filter.Name))
-        {
-            var name = filter.Name.ToLower();
-            query = query.Where(x => x.Name.ToLower().Contains(name));
-        }
+        var total = await _developerRepository.GetTotalCountAsync(
+            filter.Name, filter.CityId, filter.LanguageId, filter.Seniority, cancellationToken);
 
-        if (filter.CityId.HasValue)
-        {
-            query = query.Where(x => x.CityId == filter.CityId.Value);
-        }
-
-        if (filter.LanguageId.HasValue)
-        {
-            query = query.Where(x => x.ProgrammingLanguages.Any(p => p.Id == filter.LanguageId.Value));
-        }
-
-        if (!string.IsNullOrWhiteSpace(filter.Seniority))
-        {
-            var seniority = filter.Seniority.ToLower();
-            query = query.Where(x => x.Seniority.ToLower().Contains(seniority));
-        }
-
-        var total = await query.CountAsync(cancellationToken);
-        var items = await query.OrderBy(x => x.Name)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync(cancellationToken);
+        var items = await _developerRepository.GetPagedAsync(
+            page, pageSize, filter.Name, filter.CityId, filter.LanguageId, filter.Seniority, cancellationToken);
 
         return Result<PagedResult<DeveloperDto>>.Ok(new PagedResult<DeveloperDto>
         {
@@ -82,7 +65,7 @@ public class DeveloperService : IDeveloperService
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
         return developer is null
-            ? Result<DeveloperDto>.Fail("Developer not found.")
+            ? Result<DeveloperDto>.Fail("Desenvolvedor não encontrado.")
             : Result<DeveloperDto>.Ok(_mapper.Map<DeveloperDto>(developer));
     }
 
@@ -91,18 +74,19 @@ public class DeveloperService : IDeveloperService
         var validation = await _createValidator.ValidateAsync(request, cancellationToken);
         if (!validation.IsValid)
         {
-            return Result<DeveloperDto>.Fail(string.Join(" ", validation.Errors.Select(x => x.ErrorMessage)));
+            throw new Common.Exceptions.ValidationException(validation.Errors.Select(x => x.ErrorMessage).ToList());
         }
 
-        if (await _context.Developers.AnyAsync(x => x.Email == request.Email, cancellationToken))
+        if (await _developerRepository.ExistsByEmailAsync(request.Email, cancellationToken))
         {
-            return Result<DeveloperDto>.Fail("Developer email already registered.");
+            throw new ConflictException("DEVELOPER_EMAIL_ALREADY_EXISTS",
+                "Já existe um desenvolvedor cadastrado com este e-mail.");
         }
 
         var cityExists = await _context.Cities.AnyAsync(x => x.Id == request.CityId, cancellationToken);
         if (!cityExists)
         {
-            return Result<DeveloperDto>.Fail("City not found.");
+            throw new NotFoundException("CITY", request.CityId);
         }
 
         var languageIds = request.ProgrammingLanguageIds.Distinct().ToArray();
@@ -112,11 +96,24 @@ public class DeveloperService : IDeveloperService
 
         if (selectedLanguages.Count != languageIds.Length)
         {
-            return Result<DeveloperDto>.Fail("One or more programming languages were not found.");
+            throw new NotFoundException("PROGRAMMING_LANGUAGE",
+                "Uma ou mais linguagens de programação não foram encontradas.");
         }
 
         var developer = _mapper.Map<Developer>(request);
         developer.ProgrammingLanguages = selectedLanguages;
+
+        var exists = (await _developerRepository.ListAsync(cancellationToken))
+            .Any(d =>
+                d.Email.Equals(request.Email,
+                    StringComparison.OrdinalIgnoreCase));
+
+        if (exists)
+        {
+            return Result<DeveloperDto>.Fail(
+                "Já existe um desenvolvedor cadastrado com este e-mail.");
+        }
+
         await _context.Developers.AddAsync(developer, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
 
@@ -127,7 +124,7 @@ public class DeveloperService : IDeveloperService
     {
         if (!request.ProgrammingLanguageIds.Any())
         {
-            return Result<DeveloperDto>.Fail("At least one programming language is required.");
+            throw new Common.Exceptions.ValidationException("At least one programming language is required.");
         }
 
         var developer = await _context.Developers
@@ -136,30 +133,45 @@ public class DeveloperService : IDeveloperService
 
         if (developer is null)
         {
-            return Result<DeveloperDto>.Fail("Developer not found.");
+            throw new NotFoundException("DEVELOPER", id);
         }
 
-        if (await _context.Developers.AnyAsync(x => x.Id != id && x.Email == request.Email, cancellationToken))
+        if (await _developerRepository.ExistsByEmailAsync(id, request.Email, cancellationToken))
         {
-            return Result<DeveloperDto>.Fail("Developer email already registered.");
+            throw new ConflictException("DEVELOPER_EMAIL_ALREADY_EXISTS",
+                "Já existe um desenvolvedor cadastrado com este e-mail.");
         }
 
         var cityExists = await _context.Cities.AnyAsync(x => x.Id == request.CityId, cancellationToken);
         if (!cityExists)
         {
-            return Result<DeveloperDto>.Fail("City not found.");
+            throw new NotFoundException("CITY", request.CityId);
         }
 
         var languageIds = request.ProgrammingLanguageIds.Distinct().ToArray();
         var selectedLanguages = await _context.ProgrammingLanguages.Where(x => languageIds.Contains(x.Id)).ToListAsync(cancellationToken);
         if (selectedLanguages.Count != languageIds.Length)
         {
-            return Result<DeveloperDto>.Fail("One or more programming languages were not found.");
+            throw new NotFoundException("PROGRAMMING_LANGUAGE",
+                "Uma ou mais linguagens de programação não foram encontradas.");
         }
 
         _mapper.Map(request, developer);
         developer.Id = id;
         developer.ProgrammingLanguages = selectedLanguages;
+
+        var duplicated = (await _developerRepository.ListAsync(cancellationToken))
+            .Any(d =>
+                d.Id != id &&
+                d.Email.Equals(request.Email,
+                    StringComparison.OrdinalIgnoreCase));
+
+        if (duplicated)
+        {
+            return Result<DeveloperDto>.Fail(
+                "Já existe um desenvolvedor cadastrado com este e-mail.");
+        }
+
         await _context.SaveChangesAsync(cancellationToken);
         return await GetByIdAsync(id, cancellationToken);
     }
@@ -169,12 +181,12 @@ public class DeveloperService : IDeveloperService
         var developer = await _context.Developers.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (developer is null)
         {
-            return Result<bool>.Fail("Developer not found.");
+            throw new NotFoundException("DEVELOPER", id);
         }
 
         developer.DeletedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync(cancellationToken);
-        return Result<bool>.Ok(true, "Developer deleted successfully.");
+        return Result<bool>.Ok(true, "Desenvolvedor excluído com sucesso.");
     }
 
     public async Task<Result<byte[]>> GenerateReportPdfAsync(CancellationToken cancellationToken = default)
@@ -196,8 +208,8 @@ public class DeveloperService : IDeveloperService
                 page.Margin(30);
                 page.Header().Column(column =>
                 {
-                    column.Item().Text("DevManager - Developers Report").FontSize(20).Bold();
-                    column.Item().Text($"Generated at {DateTime.UtcNow:yyyy-MM-dd HH:mm} UTC").FontSize(9).FontColor(Colors.Grey.Darken1);
+                    column.Item().Text("Relatório de Desenvolvedores").FontSize(20).Bold().FontColor(Colors.Blue.Darken2);
+                    column.Item().Text($"Gerado em {DateTime.Now:dd/MM/yyyy HH:mm}").FontSize(9).FontColor(Colors.Grey.Darken1);
                 });
 
                 page.Content().Table(table =>
@@ -213,7 +225,7 @@ public class DeveloperService : IDeveloperService
 
                     table.Header(header =>
                     {
-                        foreach (var title in new[] { "Developer", "City", "State", "Languages", "Seniority" })
+                        foreach (var title in new[] { "Desenvolvedor", "Cidade", "Estado", "Linguagens", "Senioridade" })
                         {
                             header.Cell().Background(Colors.Blue.Darken2).Padding(5).Text(title).FontColor(Colors.White).Bold();
                         }
@@ -227,6 +239,13 @@ public class DeveloperService : IDeveloperService
                         table.Cell().Padding(5).Text(string.Join(", ", developer.ProgrammingLanguages.Select(x => x.Name)));
                         table.Cell().Padding(5).Text(developer.Seniority);
                     }
+                });
+
+                page.Footer().AlignCenter().Text(text =>
+                {
+                    text.CurrentPageNumber().FontSize(9);
+                    text.Span(" / ").FontSize(9);
+                    text.TotalPages().FontSize(9);
                 });
             });
         }).GeneratePdf();

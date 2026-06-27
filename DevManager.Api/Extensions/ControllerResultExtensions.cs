@@ -12,6 +12,15 @@ public static class ControllerResultExtensions
             return controller.Ok(result.Data);
         }
 
+        if (result.Message.Contains("já existe", StringComparison.OrdinalIgnoreCase))
+        {
+            return controller.Conflict(new
+            {
+                success = false,
+                message = result.Message
+            });
+        }
+
         return result.Message.Contains("not found", StringComparison.OrdinalIgnoreCase)
             ? controller.NotFound(new { success = false, message = result.Message })
             : controller.BadRequest(new { success = false, message = result.Message });

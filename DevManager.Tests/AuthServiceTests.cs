@@ -17,7 +17,7 @@ public class AuthServiceTests
     {
         var passwordHasher = hasherMock?.Object ?? new MockPasswordHasher();
         return new AuthService(
-            new MockRepository<User>(context),
+            new MockUserRepository(context),
             new MockUnitOfWork(context),
             new MockJwtTokenService(),
             passwordHasher,
@@ -42,7 +42,7 @@ public class AuthServiceTests
         var result = await service.LoginAsync(new LoginRequest("notfound@test.com", "password"));
 
         result.Success.Should().BeFalse();
-        result.Message.Should().Contain("Invalid credentials");
+        result.Message.Should().Contain("Usuário não encontrado");
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public class AuthServiceTests
         var result = await service.LoginAsync(new LoginRequest("test@test.com", "password"));
 
         result.Success.Should().BeFalse();
-        result.Message.Should().Contain("Invalid credentials");
+        result.Message.Should().Contain("Senha incorreta");
     }
 
     [Fact]
@@ -88,10 +88,8 @@ public class AuthServiceTests
 
         var service = CreateService(context);
 
-        var result = await service.RegisterAsync(new RegisterRequest("New User", "existing@test.com", "Password123"));
-
-        result.Success.Should().BeFalse();
-        result.Message.Should().Contain("Email already registered");
+        await Assert.ThrowsAsync<Application.Common.Exceptions.ConflictException>(() =>
+            service.RegisterAsync(new RegisterRequest("New User", "existing@test.com", "Password123")));
     }
 
     [Fact]
@@ -109,27 +107,40 @@ public class AuthServiceTests
         hasherMock.Verify(h => h.HashPassword("Password123"), Times.Once);
     }
 
-    private class MockRepository<T> : IRepository<T> where T : class
+    private class MockUserRepository : IUserRepository
     {
         private readonly DevManagerDbContext _context;
-        public MockRepository(DevManagerDbContext context) => _context = context;
-        public Task<T?> GetByIdAsync(Guid id, CancellationToken ct = default) => Task.FromResult<T?>(_context.Set<T>().FindAsync([id], ct).GetAwaiter().GetResult());
-        public Task<IReadOnlyList<T>> ListAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<T>>(_context.Set<T>().ToListAsync(ct).GetAwaiter().GetResult());
-        public async Task<T> AddAsync(T entity, CancellationToken ct = default)
+        public MockUserRepository(DevManagerDbContext context) => _context = context;
+
+        public Task<User?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+            _context.Users.FirstOrDefaultAsync(u => u.Id == id, ct)!;
+
+        public Task<IReadOnlyList<User>> ListAsync(CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<User>>(_context.Users.ToList());
+
+        public async Task<User> AddAsync(User entity, CancellationToken ct = default)
         {
-            var result = await _context.Set<T>().AddAsync(entity, ct);
+            var result = await _context.Users.AddAsync(entity, ct);
             return result.Entity;
         }
-        public Task UpdateAsync(T entity, CancellationToken ct = default)
+
+        public Task UpdateAsync(User entity, CancellationToken ct = default)
         {
-            _context.Set<T>().Update(entity);
+            _context.Users.Update(entity);
             return Task.CompletedTask;
         }
-        public Task DeleteAsync(T entity, CancellationToken ct = default)
+
+        public Task DeleteAsync(User entity, CancellationToken ct = default)
         {
-            _context.Set<T>().Remove(entity);
+            _context.Users.Remove(entity);
             return Task.CompletedTask;
         }
+
+        public Task<User?> GetByEmailAsync(string email, CancellationToken ct = default) =>
+            _context.Users.FirstOrDefaultAsync(u => u.Email == email, ct)!;
+
+        public Task<bool> ExistsByEmailAsync(string email, CancellationToken ct = default) =>
+            _context.Users.AnyAsync(u => u.Email == email, ct);
     }
 
     private class MockUnitOfWork : IUnitOfWork

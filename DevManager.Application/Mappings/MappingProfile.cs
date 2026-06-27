@@ -1,6 +1,7 @@
 using AutoMapper;
 using DevManager.Application.DTOs;
 using DevManager.Domain.Entities;
+using DevManager.Domain.Enums;
 
 namespace DevManager.Application.Mappings;
 
@@ -20,7 +21,12 @@ public class MappingProfile : Profile
         CreateMap<UpdateCityRequest, City>();
 
         CreateMap<ProgrammingLanguage, ProgrammingLanguageDto>()
-            .ConstructUsing(s => new ProgrammingLanguageDto(s.Id, s.Name, s.Type));
+            .ConstructUsing(s => new ProgrammingLanguageDto(
+                s.Id,
+                s.Name,
+                s.Type,
+                GetLanguageColor(s.Type),
+                GetLanguageIcon(s.Type)));
         CreateMap<CreateProgrammingLanguageRequest, ProgrammingLanguage>();
         CreateMap<UpdateProgrammingLanguageRequest, ProgrammingLanguage>();
 
@@ -41,4 +47,28 @@ public class MappingProfile : Profile
         CreateMap<CreateDeveloperRequest, Developer>();
         CreateMap<UpdateDeveloperRequest, Developer>();
     }
+
+    private static string GetLanguageColor(ProgrammingLanguageType type) => type switch
+    {
+        ProgrammingLanguageType.Backend => "#3B82F6",
+        ProgrammingLanguageType.Frontend => "#10B981",
+        ProgrammingLanguageType.Mobile => "#8B5CF6",
+        ProgrammingLanguageType.Database => "#F59E0B",
+        ProgrammingLanguageType.Cloud => "#06B6D4",
+        ProgrammingLanguageType.DevOps => "#6B7280",
+        ProgrammingLanguageType.Game => "#EF4444",
+        _ => "#6B7280"
+    };
+
+    private static string GetLanguageIcon(ProgrammingLanguageType type) => type switch
+    {
+        ProgrammingLanguageType.Backend => "server",
+        ProgrammingLanguageType.Frontend => "code",
+        ProgrammingLanguageType.Mobile => "smartphone",
+        ProgrammingLanguageType.Database => "database",
+        ProgrammingLanguageType.Cloud => "cloud",
+        ProgrammingLanguageType.DevOps => "settings",
+        ProgrammingLanguageType.Game => "gamepad-2",
+        _ => "code"
+    };
 }

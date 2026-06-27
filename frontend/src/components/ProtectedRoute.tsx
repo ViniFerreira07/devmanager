@@ -1,24 +1,25 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [authorized, setAuthorized] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
-    const token = localStorage.getItem('devmanager-token');
-    if (!token) {
+    if (!user) {
       router.replace('/login');
-      return;
     }
+  }, [user, router]);
 
-    setAuthorized(true);
-  }, [router]);
-
-  if (!authorized) {
-    return <main className="flex min-h-screen items-center justify-center bg-background text-foreground">Carregando...</main>;
+  if (!user) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
+        Carregando...
+      </main>
+    );
   }
 
   return children;

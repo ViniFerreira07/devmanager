@@ -1,5 +1,6 @@
 using AutoMapper;
 using DevManager.Application.Common;
+using DevManager.Application.Common.Exceptions;
 using DevManager.Application.DTOs;
 using DevManager.Application.Interfaces;
 using DevManager.Domain.Entities;
@@ -11,14 +12,14 @@ namespace DevManager.Application.Services;
 
 public class CityService : ICityService
 {
-    private readonly IRepository<City> _cityRepository;
-    private readonly IRepository<State> _stateRepository;
+    private readonly ICityRepository _cityRepository;
+    private readonly IStateRepository _stateRepository;
     private readonly IAppDbContext _context;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
     private readonly IValidator<CreateCityRequest> _createValidator;
 
-    public CityService(IRepository<City> cityRepository, IRepository<State> stateRepository, IAppDbContext context, IUnitOfWork unitOfWork, IMapper mapper, IValidator<CreateCityRequest> createValidator)
+    public CityService(ICityRepository cityRepository, IStateRepository stateRepository, IAppDbContext context, IUnitOfWork unitOfWork, IMapper mapper, IValidator<CreateCityRequest> createValidator)
     {
         _cityRepository = cityRepository;
         _stateRepository = stateRepository;
@@ -37,7 +38,9 @@ public class CityService : ICityService
     public async Task<Result<CityDto>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var city = await _context.Cities.AsNoTracking().Include(x => x.State).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        return city is null ? Result<CityDto>.Fail("City not found.") : Result<CityDto>.Ok(_mapper.Map<CityDto>(city));
+        return city is null
+            ? Result<CityDto>.Fail("Cidade não encontrada.")
+            : Result<CityDto>.Ok(_mapper.Map<CityDto>(city));
     }
 
     public async Task<Result<CityDto>> CreateAsync(CreateCityRequest request, CancellationToken cancellationToken = default)
@@ -45,13 +48,18 @@ public class CityService : ICityService
         var validation = await _createValidator.ValidateAsync(request, cancellationToken);
         if (!validation.IsValid)
         {
-            return Result<CityDto>.Fail(string.Join(" ", validation.Errors.Select(x => x.ErrorMessage)));
+            throw new Common.Exceptions.ValidationException(validation.Errors.Select(x => x.ErrorMessage).ToList());
         }
 
         var state = await _stateRepository.GetByIdAsync(request.StateId, cancellationToken);
         if (state is null)
         {
-            return Result<CityDto>.Fail("State not found.");
+            throw new NotFoundException("STATE", request.StateId);
+        }
+
+        if (await _cityRepository.ExistsByNameAndStateAsync(request.Name, request.StateId, cancellationToken))
+        {
+            throw new ConflictException("CITY_ALREADY_EXISTS", "Já existe esta cidade neste estado.");
         }
 
         var city = _mapper.Map<City>(request);
@@ -65,13 +73,18 @@ public class CityService : ICityService
         var city = await _cityRepository.GetByIdAsync(id, cancellationToken);
         if (city is null)
         {
-            return Result<CityDto>.Fail("City not found.");
+            throw new NotFoundException("CITY", id);
         }
 
         var state = await _stateRepository.GetByIdAsync(request.StateId, cancellationToken);
         if (state is null)
         {
-            return Result<CityDto>.Fail("State not found.");
+            throw new NotFoundException("STATE", request.StateId);
+        }
+
+        if (await _cityRepository.ExistsByNameAndStateAsync(id, request.Name, request.StateId, cancellationToken))
+        {
+            throw new ConflictException("CITY_ALREADY_EXISTS", "Já existe esta cidade neste estado.");
         }
 
         _mapper.Map(request, city);
@@ -85,11 +98,11 @@ public class CityService : ICityService
         var city = await _cityRepository.GetByIdAsync(id, cancellationToken);
         if (city is null)
         {
-            return Result<bool>.Fail("City not found.");
+            throw new NotFoundException("CITY", id);
         }
 
         await _cityRepository.DeleteAsync(city, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return Result<bool>.Ok(true, "City deleted successfully.");
+        return Result<bool>.Ok(true, "Cidade excluída com sucesso.");
     }
 }

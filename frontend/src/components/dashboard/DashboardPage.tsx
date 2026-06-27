@@ -54,24 +54,24 @@ export function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Total Developers"
+          label="Total de Desenvolvedores"
           value={devs.isLoading ? <Skeleton className="h-8 w-16" /> : (devs.data?.length ?? 0)}
           icon={Users}
           trend="+12%"
           hint="vs. mês passado"
         />
         <StatCard
-          label="Total Languages"
+          label="Total de Linguagens"
           value={langs.isLoading ? <Skeleton className="h-8 w-16" /> : (langs.data?.length ?? 0)}
           icon={Code2}
         />
         <StatCard
-          label="Total Cities"
+          label="Total de Cidades"
           value={cities.isLoading ? <Skeleton className="h-8 w-16" /> : (cities.data?.length ?? 0)}
           icon={Building2}
         />
         <StatCard
-          label="Total States"
+          label="Total de Estados"
           value={states.isLoading ? <Skeleton className="h-8 w-16" /> : (states.data?.length ?? 0)}
           icon={MapIcon}
         />

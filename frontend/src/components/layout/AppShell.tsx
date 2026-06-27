@@ -27,11 +27,11 @@ import { confirmAlert } from '@/lib/swal';
 
 const nav = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/developers', label: 'Developers', icon: Users },
-  { href: '/states', label: 'States', icon: Map },
-  { href: '/cities', label: 'Cities', icon: Building2 },
-  { href: '/languages', label: 'Languages', icon: Code2 },
-  { href: '/reports', label: 'Reports', icon: FileBarChart },
+  { href: '/developers', label: 'Desenvolvedores', icon: Users },
+  { href: '/states', label: 'Estados', icon: Map },
+  { href: '/cities', label: 'Cidades', icon: Building2 },
+  { href: '/languages', label: 'Linguagens', icon: Code2 },
+  { href: '/reports', label: 'Relatórios', icon: FileBarChart },
 ] as const;
 
 function Logo() {
@@ -206,7 +206,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Header onMenu={() => setMobileOpen(true)} />
         <main className="flex-1 animate-in fade-in duration-300">{children}</main>
         <footer className="border-t px-6 py-3 text-xs text-muted-foreground">
-          © {new Date().getFullYear()} DevManager — Built with care.
+          © {new Date().getFullYear()} DevManager
         </footer>
       </div>
     </div>

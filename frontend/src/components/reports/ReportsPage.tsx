@@ -46,7 +46,7 @@ export function ReportsPage() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = 'developers-report.pdf';
+      link.download = 'relatorio-desenvolvedores.pdf';
       document.body.appendChild(link);
       link.click();
       link.remove();

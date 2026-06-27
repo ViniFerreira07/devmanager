@@ -21,7 +21,7 @@ public class ReportsController : ControllerBase
     {
         var pdfBytes = await _developerService.GenerateReportPdfAsync(cancellationToken);
         return pdfBytes.Success && pdfBytes.Data is not null
-            ? File(pdfBytes.Data, "application/pdf", "developers-report.pdf")
+            ? File(pdfBytes.Data, "application/pdf", "relatorio-desenvolvedores.pdf")
             : BadRequest(new { success = false, message = pdfBytes.Message });
     }
 }

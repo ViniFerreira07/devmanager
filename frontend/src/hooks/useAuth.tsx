@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/services/api';
 import { UserSession } from '@/types';
@@ -18,13 +18,18 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [session, setSession] = useState<UserSession | null>(() => {
-    if (typeof window === 'undefined') return null;
+  const [session, setSession] = useState<UserSession | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
     const token = localStorage.getItem('devmanager-token');
-    const email = localStorage.getItem('devmanager-email') ?? '';
-    const name = localStorage.getItem('devmanager-name') ?? '';
-    return token ? { token, email, name } : null;
-  });
+    if (token) {
+      const email = localStorage.getItem('devmanager-email') ?? '';
+      const name = localStorage.getItem('devmanager-name') ?? '';
+      setSession({ token, email, name });
+    }
+    setHydrated(true);
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -53,6 +58,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }),
     [router, session],
   );
+
+  if (!hydrated) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
+        Carregando...
+      </main>
+    );
+  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
